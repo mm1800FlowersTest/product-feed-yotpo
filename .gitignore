@@ -3,9 +3,9 @@ target/
 
 ### STS ###
 .apt_generated
-.classpath
-.factorypath
-.project
+#.classpath
+#.factorypath
+#.project
 .settings
 .springBeans
 
