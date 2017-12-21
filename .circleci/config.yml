@@ -3,40 +3,220 @@
 # Check https://circleci.com/docs/2.0/language-java/ for more details
 #
 version: 2
+
+##### Declare defaults to be used in multiple jobs #####
+references:
+  defaults: &defaults
+      working_directory: ~/workspace
+      docker:
+        # Specify the build base image here.    
+        #- image: mmosttler/circleci_openjdk_gcloud:8u151-jdk-gcloud-182
+        - image: circleci/openjdk:8u151-jdk
+
+  deploy_defaults: &deploy_defaults
+      working_directory: ~/workspace
+      machine:
+        enabled: true
+
+##### Declare the Jobs #####
 jobs:
   build:
-    docker:
-      # specify the version you desire here
-      - image: circleci/openjdk:8-jdk
-      
-      # Specify service dependencies here if necessary
-      # CircleCI maintains a library of pre-built images
-      # documented at https://circleci.com/docs/2.0/circleci-images/
-      # - image: circleci/postgres:9.4
-
-    working_directory: ~/repo
-
+    <<: *defaults
     environment:
       # Customize the JVM maximum heap limit
       MAVEN_OPTS: -Xmx3200m
-    
-    steps:
+          
+    steps:            
       - checkout
 
-      # Download and cache dependencies
+      # Download and cache application dependencies
       - restore_cache:
           keys:
-          - v1-dependencies-{{ checksum "pom.xml" }}
-          # fallback to using the latest cache if no exact match is found
-          - v1-dependencies-
-
+            - v1-dependencies-{{ checksum "pom.xml" }}
+            # fallback to using the latest cache if no exact match is found
+            - v1-dependencies-
       - run: mvn dependency:go-offline
-
       - save_cache:
-          paths:
-            - ~/.m2
           key: v1-dependencies-{{ checksum "pom.xml" }}
-        
-      # run tests!
-      - run: mvn integration-test
+          paths:
+            - ~/.m2 
 
+      - run: mvn package spring-boot:repackage
+
+      - persist_to_workspace:
+          root: ~/workspace
+          paths:
+            - pom.xml
+            - .springBeans
+            - src/*
+            - target/*        
+      
+  unit-test:
+    <<: *defaults
+    steps:        
+      - attach-workspace:
+          at: ~/workspace
+      - restore_cache:
+          key: v1-dependencies-{{ checksum "pom.xml" }}
+  
+      - run:
+          name: Run Unit Tests
+          command: mvn test -DskipTests=false
+      - run:
+          name: Save test results for CircleCI
+          command: |
+            mkdir -p ~/junit/ 
+            find . -type f -regex ".*/target/surefire-reports/.*xml" -exec cp {} ~/junit/ \;
+          when: always
+      - store_test_results:
+          path: ~/junit
+      - store_artifacts:
+          path: ~/junit         
+
+  integration-test:
+    <<: *defaults
+    steps:        
+      - attach-workspace:
+          at: ~/workspace
+      - restore_cache:
+          key: v1-dependencies-{{ checksum "pom.xml" }}
+  
+      - run:
+          name: Run Integration Tests
+          command: mvn verify
+      - run:
+          name: Save test results 
+          command: |
+            mkdir -p ~/junit/ 
+            find . -type f -regex ".*/target/failsafe-reports/.*xml" -exec cp {} ~/junit/ \;
+          when: always
+      - store_test_results:
+          path: ~/junit
+      - store_artifacts:
+          path: ~/junit         
+
+  ##### DEPLOYMENT JOBS #####
+  deploy-dev:  
+    <<: *deploy_defaults
+    steps:        
+      - attach-workspace:
+          at: ~/workspace
+      - restore_cache:
+          key: v1-gcloud-{{ .Environment.CIRCLE_SHA1 }}
+      - deploy: 
+          name: Deploy to DEV
+          command: |
+            # retrieve our gcloud service account from the CircleCI environment
+            #echo $GOOGLE_AUTH | base64 --decode --ignore-garbage > ~/gcp-key.json
+            #gcloud auth activate-service-account --key-file  ~/gcp-key.json      
+            # set the gcloud config environment like current project
+            #gcloud --quiet config set project $GOOGLE_PROJECT_PREFIX-dev1
+
+            #GAE_TAG=$(echo "$CIRCLE_TAG" | sed 's/./\L&/g' | sed 's/[\.\+]/-/g')
+            #gcloud app deploy target/appengine-staging/app.yaml --version v$GAE_TAG-$CIRCLE_BUILD_NUM
+      - store_artifacts:
+          path: ~/.config/gcloud/logs 
+
+  deploy-uat:  
+    <<: *deploy_defaults
+    steps:        
+      - attach-workspace:
+          at: ~/workspace
+      - deploy: 
+          name: Deploy to UAT
+          command: |
+            #echo $GOOGLE_AUTH_UAT1 | base64 --decode --ignore-garbage > ~/gcp-key.json
+            #gcloud auth activate-service-account --key-file  ~/gcp-key.json      
+            #gcloud --quiet config set project $GOOGLE_PROJECT_PREFIX-uat1
+  
+            #deploy        
+            #GAE_TAG=$(echo "$CIRCLE_TAG" | sed 's/./\L&/g' | sed 's/[\.\+]/-/g')
+            #gcloud app deploy target/appengine-staging/app.yaml --no-promote --no-stop-previous-version --version v$GAE_TAG-$CIRCLE_BUILD_NUM
+
+  deploy-prod:  
+    <<: *deploy_defaults
+    steps:        
+      - attach-workspace:
+          at: ~/workspace
+      - restore_cache:
+          key: v1-gcloud-{{ .Environment.CIRCLE_SHA1 }}
+      - deploy: 
+          name: Deploy to PROD
+          command: |
+            #echo $GOOGLE_AUTH_PROD | base64 --decode --ignore-garbage > ~/gcp-key.json
+            #gcloud auth activate-service-account --key-file  ~/gcp-key.json      
+            #gcloud --quiet config set project $GOOGLE_PROJECT_PREFIX-prod
+
+            #GAE_TAG=$(echo "$CIRCLE_TAG" | sed 's/./\L&/g' | sed 's/[\.\+]/-/g')
+            #gcloud app deploy target/appengine-staging/app.yaml --no-promote --no-stop-previous-version --version v$GAE_TAG-$CIRCLE_BUILD_NUM
+
+######################
+## Define the Job Workflow
+######################
+workflows:
+  version: 2
+  build-deploy-promote:
+    jobs:    
+      - build:
+          filters:
+            tags:
+              only: /.*/
+      - unit-test:
+          filters:
+            tags:
+              only: /.*/
+          requires:
+            - build
+      - integration-test:
+          filters:
+            tags:
+              only: /.*/
+          requires:
+            - build            
+
+      - deploy-dev:
+          filters:
+            tags:
+              only: /.*/
+          requires:        
+            - unit-test
+            - integration-test
+            
+      - deploy-uat:      
+          filters:
+            tags:
+              only: /^(\d+\.\d+\.\d+)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+(uat))?[\^\{\}]*$/
+            branches:
+              ignore: /.*/
+          requires:        
+            - unit-test
+            - integration-test
+
+      - deploy-loadtest:      
+          filters:
+            tags:
+              only: /^(\d+\.\d+\.\d+)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+(loadtest))?[\^\{\}]*$/
+            branches:
+              ignore: /.*/
+          requires:        
+            - unit-test
+            - integration-test
+
+      - hold-prod:
+          type: approval
+          filters:
+            tags:
+              only: /^(\d+\.\d+\.\d+)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+(prod))?[\^\{\}]*$/
+            branches:
+              ignore: /.*/
+          requires:
+            - unit-test
+            - integration-test
+      - deploy-prod:
+          filters:
+            tags:
+              only: /^(\d+\.\d+\.\d+)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+(prod))?[\^\{\}]*$/
+            branches:
+              ignore: /.*/
+          requires:        
+            - hold-prod
