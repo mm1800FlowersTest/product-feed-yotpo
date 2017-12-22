@@ -2,6 +2,7 @@
 #
 # Check https://circleci.com/docs/2.0/language-java/ for more details
 #
+# https://circleci.com/docs/2.0/google-container-engine/#setting-up-authentication
 version: 2
 
 ##### Declare defaults to be used in multiple jobs #####
@@ -41,24 +42,51 @@ jobs:
           paths:
             - ~/.m2 
 
-      - run: mvn package spring-boot:repackage
-
+      - run: 
+          name: Compile
+          command: |
+            mvn compile
+            
       - persist_to_workspace:
           root: ~/workspace
           paths:
             - pom.xml
             - .springBeans
+            - Dockerfile
             - src/*
-            - target/*        
-      
+            - target/*
+  
+  build-image:  
+    <<: *deploy_defaults
+    steps:        
+      - attach-workspace:
+          at: ~/workspace
+      - restore_cache:
+          keys:
+            - v1-dependencies-{{ checksum "pom.xml" }}
+      - run: 
+          name: Package up the compiled/built source.
+          command: |
+            mvn package spring-boot:repackage -DskipTests=true
+      - run:
+          name: Build new image and push to private container registry
+          command: |
+            ls -al target
+
+            docker build -t gcr.io/product-feed-docker/product-feed-yotpo .
+            # retrieve our gcloud service account from the CircleCI environment
+            echo $GCP_AUTH_DOCKER > ~/gcp-docker-key.json
+            gcloud auth activate-service-account --key-file  ~/gcp-docker-key.json                
+            gcloud docker --authorize-only
+            docker push gcr.io/product-feed-docker/product-feed-yotpo:latest
+  
   unit-test:
     <<: *defaults
     steps:        
       - attach-workspace:
           at: ~/workspace
       - restore_cache:
-          key: v1-dependencies-{{ checksum "pom.xml" }}
-  
+          key: v1-dependencies-{{ checksum "pom.xml" }}  
       - run:
           name: Run Unit Tests
           command: mvn test -DskipTests=false
@@ -80,7 +108,6 @@ jobs:
           at: ~/workspace
       - restore_cache:
           key: v1-dependencies-{{ checksum "pom.xml" }}
-  
       - run:
           name: Run Integration Tests
           command: mvn verify
@@ -161,6 +188,12 @@ workflows:
           filters:
             tags:
               only: /.*/
+      - build-image:
+          filters:
+            tags:
+              only: /.*/
+          requires:
+            - build
       - unit-test:
           filters:
             tags:
@@ -178,7 +211,8 @@ workflows:
           filters:
             tags:
               only: /.*/
-          requires:        
+          requires:
+            - build-image
             - unit-test
             - integration-test
             
