@@ -13,9 +13,9 @@ references:
         # Specify the build base image here.    
         #- image: mmosttler/circleci_openjdk_gcloud:8u151-jdk-gcloud-182
         - image: circleci/openjdk:8u151-jdk
-    environment:
-      # Customize the JVM maximum heap limit
-      MAVEN_OPTS: -Xmx3200m
+      environment:
+        # Customize the JVM maximum heap limit
+        MAVEN_OPTS: -Xmx3200m
 
   machine_defaults: &machine_defaults
       working_directory: ~/workspace
@@ -78,10 +78,10 @@ jobs:
             # retrieve our gcloud service account from the CircleCI environment
             echo $GCP_AUTH_DOCKER > ~/gcp-docker-key.json
             gcloud auth activate-service-account --key-file  ~/gcp-docker-key.json                
-        - save_cache:
-            key: v1-gcloud-{{ .Environment.CIRCLE_SHA1 }}
-            paths:
-              - ~/.config/gcloud
+      - save_cache:
+          key: v1-gcloud-{{ .Environment.CIRCLE_SHA1 }}
+          paths:
+            - ~/.config/gcloud
       - run:
           name: Build new image and push to private container registry
           command: |
