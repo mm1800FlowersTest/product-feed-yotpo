@@ -43,6 +43,14 @@ jobs:
 
       - run: mvn package spring-boot:repackage
 
+      - run:
+          name: Build new image and push to private container registry
+          command: |
+            gcloud docker --authorize-only
+            docker build -t gcr.io/product-feed-docker/product-feed-yotpo .
+            #docker login -u $DOCKER_USER -p $DOCKER_PASS
+            gcloud docker -- push gcr.io/product-feed-docker/product-feed-yotpo:latest
+            
       - persist_to_workspace:
           root: ~/workspace
           paths:
