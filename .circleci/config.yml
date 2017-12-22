@@ -42,7 +42,10 @@ jobs:
           paths:
             - ~/.m2 
 
-      - run: mvn package spring-boot:repackage
+      - run: 
+          name: Compile
+          command: |
+            mvn compile
             
       - persist_to_workspace:
           root: ~/workspace
@@ -51,13 +54,17 @@ jobs:
             - .springBeans
             - Dockerfile
             - src/*
-            - target/*        
+            - target/*
   
   build-image:  
     <<: *deploy_defaults
     steps:        
       - attach-workspace:
           at: ~/workspace
+      - run: 
+          name: Package up the compiled/built source.
+          command: |
+            mvn package spring-boot:repackage -DskipTests=true
       - run:
           name: Build new image and push to private container registry
           command: |
