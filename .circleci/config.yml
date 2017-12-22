@@ -10,8 +10,8 @@ references:
       working_directory: ~/workspace
       docker:
         # Specify the build base image here.    
-        #- image: mmosttler/circleci_openjdk_gcloud:8u151-jdk-gcloud-182
-        - image: circleci/openjdk:8u151-jdk
+        - image: mmosttler/circleci_openjdk_gcloud:8u151-jdk-gcloud-182
+        #- image: circleci/openjdk:8u151-jdk
 
   deploy_defaults: &deploy_defaults
       working_directory: ~/workspace
@@ -46,7 +46,7 @@ jobs:
       - run:
           name: Build new image and push to private container registry
           command: |
-            sudo /opt/google-cloud-sdk/bin/gcloud docker --authorize-only
+            gcloud docker --authorize-only
             docker build -t gcr.io/product-feed-docker/product-feed-yotpo .
             #docker login -u $DOCKER_USER -p $DOCKER_PASS
             gcloud docker -- push gcr.io/product-feed-docker/product-feed-yotpo:latest
