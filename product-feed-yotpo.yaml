@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: product-feed-yotpo
+  labels:
+    name: product-feed-yotpo
+  namespace: product-feed-processors
+spec:
+  containers:
+  - image: gcr.io/product-feed-docker/product-feed-yotpo
+    name: product-feed-yotpo
