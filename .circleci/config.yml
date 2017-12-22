@@ -7,26 +7,30 @@ version: 2
 
 ##### Declare defaults to be used in multiple jobs #####
 references:
-  defaults: &defaults
+  java_defaults: &java_defaults
       working_directory: ~/workspace
       docker:
         # Specify the build base image here.    
         #- image: mmosttler/circleci_openjdk_gcloud:8u151-jdk-gcloud-182
         - image: circleci/openjdk:8u151-jdk
-
-  deploy_defaults: &deploy_defaults
-      working_directory: ~/workspace
-      machine:
-        enabled: true
-
-##### Declare the Jobs #####
-jobs:
-  build:
-    <<: *defaults
     environment:
       # Customize the JVM maximum heap limit
       MAVEN_OPTS: -Xmx3200m
 
+  machine_defaults: &machine_defaults
+      working_directory: ~/workspace
+      machine:
+        enabled: true
+
+  gcloud_defaults: &gcloud_defaults
+      working_directory: ~/workspace
+      docker:
+        - image: mmosttler/circleci_openjdk_gcloud:8u151-jdk-gcloud-182
+
+##### Declare the Jobs #####
+jobs:
+  build:
+    <<: *java_defaults
     steps:            
       - checkout
 
@@ -57,7 +61,7 @@ jobs:
             - target/*
   
   build-image:  
-    <<: *deploy_defaults
+    <<: *machine_defaults
     steps:        
       - attach-workspace:
           at: ~/workspace
@@ -67,21 +71,26 @@ jobs:
       - run: 
           name: Package up the compiled/built source.
           command: |
-            mvn package spring-boot:repackage -DskipTests=true
+            mvn package spring-boot:repackage -DskipTests=true      
       - run:
-          name: Build new image and push to private container registry
+          name: connect to gcloud
           command: |
-            ls -al target
-
-            docker build -t gcr.io/product-feed-docker/product-feed-yotpo .
             # retrieve our gcloud service account from the CircleCI environment
             echo $GCP_AUTH_DOCKER > ~/gcp-docker-key.json
             gcloud auth activate-service-account --key-file  ~/gcp-docker-key.json                
+        - save_cache:
+            key: v1-gcloud-{{ .Environment.CIRCLE_SHA1 }}
+            paths:
+              - ~/.config/gcloud
+      - run:
+          name: Build new image and push to private container registry
+          command: |
+            docker build -t gcr.io/product-feed-docker/product-feed-yotpo .
             gcloud docker --authorize-only
             docker push gcr.io/product-feed-docker/product-feed-yotpo:latest
-  
+
   unit-test:
-    <<: *defaults
+    <<: *java_defaults
     steps:        
       - attach-workspace:
           at: ~/workspace
@@ -102,7 +111,7 @@ jobs:
           path: ~/junit         
 
   integration-test:
-    <<: *defaults
+    <<: *java_defaults
     steps:        
       - attach-workspace:
           at: ~/workspace
@@ -124,7 +133,7 @@ jobs:
 
   ##### DEPLOYMENT JOBS #####
   deploy-dev:  
-    <<: *deploy_defaults
+    <<: *gcloud_defaults
     steps:        
       - attach-workspace:
           at: ~/workspace
@@ -166,7 +175,7 @@ jobs:
           path: ~/.config/gcloud/logs 
 
   deploy-uat:  
-    <<: *deploy_defaults
+    <<: *gcloud_defaults
     steps:        
       - attach-workspace:
           at: ~/workspace
@@ -182,7 +191,7 @@ jobs:
             #gcloud app deploy target/appengine-staging/app.yaml --no-promote --no-stop-previous-version --version v$GAE_TAG-$CIRCLE_BUILD_NUM
 
   deploy-prod:  
-    <<: *deploy_defaults
+    <<: *gcloud_defaults
     steps:        
       - attach-workspace:
           at: ~/workspace
