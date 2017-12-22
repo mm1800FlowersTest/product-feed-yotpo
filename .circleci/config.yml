@@ -49,6 +49,7 @@ jobs:
           paths:
             - pom.xml
             - .springBeans
+            - Dockerfile
             - src/*
             - target/*        
   
@@ -60,14 +61,16 @@ jobs:
       - run:
           name: Build new image and push to private container registry
           command: |
+            docker build -t gcr.io/product-feed-docker/product-feed-yotpo .
+            #docker login -u $DOCKER_USER -p $DOCKER_PASS
+
             # retrieve our gcloud service account from the CircleCI environment
             #echo $GOOGLE_AUTH | base64 --decode --ignore-garbage > ~/gcp-key.json
             echo $GCP_AUTH_DOCKER > ~/gcp-docker-key.json
             gcloud auth activate-service-account --key-file  ~/gcp-docker-key.json      
           
             gcloud docker --authorize-only
-            docker build -t gcr.io/product-feed-docker/product-feed-yotpo .
-            #docker login -u $DOCKER_USER -p $DOCKER_PASS
+
             gcloud docker -- push gcr.io/product-feed-docker/product-feed-yotpo:latest      
   
   unit-test:
