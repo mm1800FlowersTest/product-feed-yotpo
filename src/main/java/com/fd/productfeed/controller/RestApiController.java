@@ -26,7 +26,6 @@ import com.fd.productfeed.utils.FDJacksonUtils;
 @RequestMapping("/api")
 public class RestApiController {
 	
-	
 // -------------------Create mass product-------------------------------------------
 	 
     @RequestMapping(value = "products/mass_create", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
@@ -62,16 +61,14 @@ public class RestApiController {
         } catch(HttpStatusCodeException e) {
         	// trying to find response body:
         	String errorpayload = e.getResponseBodyAsString();
-        	System.out.println(e.toString());
-        	System.out.println(e.getMessage());
         	System.out.println("errorpayload: ");
+        	System.out.println(e.getMessage());
         	System.out.println(e.getLocalizedMessage());
         	System.out.println(e.getRawStatusCode());
         	System.out.println(errorpayload);
         } catch(RestClientException e){
         	System.out.println("RestClientException: " + e.toString()); 
         }
-        
         
         //HttpStatus status = response.getStatusCode();
         //String respBody = response.getBody();
