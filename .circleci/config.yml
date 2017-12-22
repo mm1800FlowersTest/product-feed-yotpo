@@ -2,6 +2,7 @@
 #
 # Check https://circleci.com/docs/2.0/language-java/ for more details
 #
+# https://circleci.com/docs/2.0/google-container-engine/#setting-up-authentication
 version: 2
 
 ##### Declare defaults to be used in multiple jobs #####
@@ -42,7 +43,20 @@ jobs:
             - ~/.m2 
 
       - run: mvn package spring-boot:repackage
-
+            
+      - persist_to_workspace:
+          root: ~/workspace
+          paths:
+            - pom.xml
+            - .springBeans
+            - src/*
+            - target/*        
+  
+  build-image:
+    <<: *deploy_defaults
+    steps:
+      - attach-workspace
+          at: ~/workspace
       - run:
           name: Build new image and push to private container registry
           command: |
@@ -54,16 +68,8 @@ jobs:
             gcloud docker --authorize-only
             docker build -t gcr.io/product-feed-docker/product-feed-yotpo .
             #docker login -u $DOCKER_USER -p $DOCKER_PASS
-            gcloud docker -- push gcr.io/product-feed-docker/product-feed-yotpo:latest
-            
-      - persist_to_workspace:
-          root: ~/workspace
-          paths:
-            - pom.xml
-            - .springBeans
-            - src/*
-            - target/*        
-      
+            gcloud docker -- push gcr.io/product-feed-docker/product-feed-yotpo:latest      
+  
   unit-test:
     <<: *defaults
     steps:        
@@ -174,6 +180,12 @@ workflows:
           filters:
             tags:
               only: /.*/
+      - build-image:
+          filters:
+            tags:
+              only: /.*/
+          requires:
+            - build
       - unit-test:
           filters:
             tags:
@@ -191,7 +203,8 @@ workflows:
           filters:
             tags:
               only: /.*/
-          requires:        
+          requires:
+            - build-image
             - unit-test
             - integration-test
             
