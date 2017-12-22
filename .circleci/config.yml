@@ -69,7 +69,6 @@ jobs:
           name: Build new image and push to private container registry
           command: |
             ls -al target
-            ls -al ~/workdspace/target
 
             docker build -t gcr.io/product-feed-docker/product-feed-yotpo .
             # retrieve our gcloud service account from the CircleCI environment
