@@ -52,10 +52,10 @@ jobs:
             - src/*
             - target/*        
   
-  build-image:
+  build-image:  
     <<: *deploy_defaults
-    steps:
-      - attach-workspace
+    steps:        
+      - attach-workspace:
           at: ~/workspace
       - run:
           name: Build new image and push to private container registry
