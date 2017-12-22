@@ -139,6 +139,7 @@ jobs:
           at: ~/workspace
       - restore_cache:
           key: v1-gcloud-{{ .Environment.CIRCLE_SHA1 }}
+      - run: kubectl
       - run:
           name: check if doing update deploy or new deploy
           command: |
