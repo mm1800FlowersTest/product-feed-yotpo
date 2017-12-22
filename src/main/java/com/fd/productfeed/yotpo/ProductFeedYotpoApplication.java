@@ -4,6 +4,7 @@ package com.fd.productfeed.yotpo;
  * Product feed is currently set up in main. Two products hardcoded for demo.
  * RestApiController currently sysouts response status code (401 without APP_KEY):
  * 		- 12/22/17 commented out for rabbit testing
+ * Testing CircleCI
  */
 
 import java.io.IOException;
