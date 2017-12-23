@@ -57,6 +57,7 @@ jobs:
             - pom.xml
             - .springBeans
             - Dockerfile
+            - *.yaml
             - src/*
             - target/*
   
@@ -76,7 +77,7 @@ jobs:
           name: connect to gcloud
           command: |
             # retrieve our gcloud service account from the CircleCI environment
-            echo $GCP_AUTH_DOCKER > ~/gcp-docker-key.json
+            echo $GCP_AUTH_DOCKER | base64 --decode --ignore-garbage > ~/gcp-docker-key.json
             gcloud auth activate-service-account --key-file  ~/gcp-docker-key.json                
       - save_cache:
           key: v1-gcloud-{{ .Environment.CIRCLE_SHA1 }}
