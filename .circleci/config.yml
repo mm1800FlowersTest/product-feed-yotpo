@@ -21,11 +21,17 @@ references:
       working_directory: ~/workspace
       machine:
         enabled: true
+      environment:
+        # Customize the JVM maximum heap limit
+        MAVEN_OPTS: -Xmx3200m
+        SHORT_GIT_HASH: $(echo $CIRCLE_SHA1 | cut -c -7)        
 
   gcloud_defaults: &gcloud_defaults
       working_directory: ~/workspace
       docker:
         - image: mmosttler/circleci_openjdk_gcloud:8u151-jdk-gcloud-182
+      environment:
+        SHORT_GIT_HASH: $(echo $CIRCLE_SHA1 | cut -c -7)        
 
 ##### Declare the Jobs #####
 jobs:
@@ -86,9 +92,9 @@ jobs:
       - run:
           name: Build new image and push to private container registry
           command: |
-            docker build -t gcr.io/product-feed-docker/product-feed-yotpo:$CIRCLE_BUILD_NUM .
+            docker build -t gcr.io/product-feed-docker/product-feed-yotpo:$SHORT_GIT_HASH .
             gcloud docker --authorize-only
-            docker push gcr.io/product-feed-docker/product-feed-yotpo:$CIRCLE_BUILD_NUM
+            docker push gcr.io/product-feed-docker/product-feed-yotpo:$SHORT_GIT_HASH
 
   unit-test:
     <<: *java_defaults
@@ -158,7 +164,7 @@ jobs:
             if [[ $deploy_action == "create" ]]; then
               kubectl create -f product-feed-yotpo.yaml;
             else
-              kubectl set image deployment/product-feed-yotpo-deployment product-feed-yotpo=gcr.io/product-feed-docker/product-feed-yotpo:$CIRCLE_BUILD_NUM --namespace=product-feed-processors
+              kubectl --namespace=product-feed-processors set image deployment/product-feed-yotpo-deployment product-feed-yotpo=gcr.io/product-feed-docker/product-feed-yotpo:$SHORT_GIT_HASH
             fi
       - store_artifacts:
           path: ~/.config/gcloud/logs 
