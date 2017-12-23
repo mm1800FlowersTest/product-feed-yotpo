@@ -1,11 +1,22 @@
-apiVersion: v1
-kind: Pod
+apiVersion: apps/v1 # for versions before 1.9.0 use apps/v1beta2
+kind: Deployment
 metadata:
-  name: product-feed-yotpo
-  labels:
-    name: product-feed-yotpo
+  name: product-feed-yotpo-deployment
   namespace: product-feed-processors
+  labels:
+    app: product-feed-yotpo
 spec:
-  containers:
-  - image: gcr.io/product-feed-docker/product-feed-yotpo
-    name: product-feed-yotpo
+  replicas: 1
+  selector:
+    matchLabels:
+      app: product-feed-yotpo
+  template:
+    metadata:
+      labels:
+        app: product-feed-yotpo
+    spec:
+      containers:
+      - name: product-feed-yotpo
+        image: gcr.io/product-feed-docker/product-feed-yotpo:latest
+        ports:
+        - containerPort: 8080
