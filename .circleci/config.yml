@@ -159,7 +159,6 @@ jobs:
               kubectl create -f product-feed-yotpo.yaml;
             else
               kubectl set image deployment/product-feed-yotpo-deployment product-feed-yotpo=gcr.io/product-feed-docker/product-feed-yotpo:$CIRCLE_BUILD_NUM --namespace=product-feed-processors
-              kubectl set image deployment/product-feed-yotpo-deployment product-feed-yotpo=gcr.io/product-feed-docker/product-feed-yotpo --namespace=product-feed-processors
             fi
       - store_artifacts:
           path: ~/.config/gcloud/logs 
