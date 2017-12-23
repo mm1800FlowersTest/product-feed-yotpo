@@ -139,33 +139,29 @@ jobs:
           at: ~/workspace
       - restore_cache:
           key: v1-gcloud-{{ .Environment.CIRCLE_SHA1 }}
-      - run: kubectl
       - run:
           name: check if doing update deploy or new deploy
           command: |
             gcloud container clusters get-credentials product-feed --zone us-central1-a --project product-feed-dev
-            kubectl get namespaces
-            #first check if there is a namespace for product-feed-processors
-            namespaces=$(kubectl get namespaces)
-            nsmatch=$(echo $namespaces | sed -E 's/.*(product-feed-processors).*/\1/')
-            if [[ "product-feed-processors" == $nsmatch ]]; then
-              echo "namespace exists";
-            else
-              echo "namespace doesn't exist, create it";
-            fi
-            
-            #next check if the pod is already deployed for product-feed-yotpo in the namespace.
+            #first check if the pod is already deployed for product-feed-yotpo in the namespace.
             pods=$(kubectl get pods --namespace=product-feed-processors)
             podmatch=$(echo $namespaces | sed -E 's/.*(product-feed-yotpo).*/\1/')
             if [[ "product-feed-yotpo" == $podmatch ]]; then
-              echo "pod exists, just do an update";
+              deploy_action="update";
             else
-              echo "pod doesn't exist, needs created";
+              deploy_action="create";
             fi
             
       - deploy: 
           name: Deploy to DEV
           command: |
+            echo $deploy_action
+            if [[$deploy_action == "create" ]]; then
+              kubectl create -f product-feed-yotpo.yaml;
+            else
+              #kubectl set image deployment/product-feed-yotpo product-feed-yotpo=gcr.io/product-feed-docker/product-feed-yotpo:latest --namespace=product-feed-processors
+            fi
+            
             # retrieve our gcloud service account from the CircleCI environment
             #echo $GOOGLE_AUTH | base64 --decode --ignore-garbage > ~/gcp-key.json
             #gcloud auth activate-service-account --key-file  ~/gcp-key.json      
