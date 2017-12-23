@@ -148,7 +148,7 @@ jobs:
             #first check if the pod is already deployed for product-feed-yotpo in the namespace.
             kubectl get pods --namespace=product-feed-processors
             pods=$(kubectl get pods --namespace=product-feed-processors)
-            podmatch=$(echo $namespaces | sed -E 's/.*(product-feed-yotpo).*/\1/')
+            podmatch=$(echo $pods | sed -E 's/.*(product-feed-yotpo).*/\1/')
             if [[ "product-feed-yotpo" == $podmatch ]]; then
               deploy_action="update";
             else
@@ -161,17 +161,7 @@ jobs:
               kubectl create -f product-feed-yotpo.yaml;
             else
               kubectl set image deployment/product-feed-yotpo product-feed-yotpo=gcr.io/product-feed-docker/product-feed-yotpo:latest --namespace=product-feed-processors
-              echo "update";
             fi
-            
-            # retrieve our gcloud service account from the CircleCI environment
-            #echo $GOOGLE_AUTH | base64 --decode --ignore-garbage > ~/gcp-key.json
-            #gcloud auth activate-service-account --key-file  ~/gcp-key.json      
-            # set the gcloud config environment like current project
-            #gcloud --quiet config set project $GOOGLE_PROJECT_PREFIX-dev1
-
-            #GAE_TAG=$(echo "$CIRCLE_TAG" | sed 's/./\L&/g' | sed 's/[\.\+]/-/g')
-            #gcloud app deploy target/appengine-staging/app.yaml --version v$GAE_TAG-$CIRCLE_BUILD_NUM
       - store_artifacts:
           path: ~/.config/gcloud/logs 
 
