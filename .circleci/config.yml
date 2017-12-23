@@ -86,7 +86,7 @@ jobs:
       - run:
           name: Build new image and push to private container registry
           command: |
-            docker build -t gcr.io/product-feed-docker/product-feed-yotpo .
+            docker build -t gcr.io/product-feed-docker/product-feed-yotpo:$CIRCLE_BUILD_NUM .
             gcloud docker --authorize-only
             docker push gcr.io/product-feed-docker/product-feed-yotpo:$CIRCLE_BUILD_NUM
 
