@@ -24,12 +24,6 @@ import com.fd.productfeed.utils.FDJacksonUtils;
 @RequestMapping("/api")
 public class RestApiController {
 	
-	@GetMapping("/ping")
-	public String ping()
-	{
-		return "hello";
-	}
-	
 // -------------------Create mass product-------------------------------------------
 	 
     @RequestMapping(value = "products/mass_create", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)

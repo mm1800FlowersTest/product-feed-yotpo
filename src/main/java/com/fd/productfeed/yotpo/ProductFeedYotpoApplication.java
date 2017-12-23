@@ -1,14 +1,9 @@
+/*
+ * 
+ */
 package com.fd.productfeed.yotpo;
 
-/*
- * Product feed is currently set up in main. Two products hardcoded for demo.
- * RestApiController currently sysouts response status code (401 without APP_KEY):
- * 		- 12/22/17 commented out for rabbit testing
- * Testing CircleCI
- */
-
 import java.io.IOException;
-
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeoutException;
@@ -16,10 +11,8 @@ import java.util.concurrent.TimeoutException;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
-import com.fd.productfeed.request.ProductsFeed;
 import com.fd.productfeed.request.Product;
-import com.fd.productfeed.controller.RestApiController;
-
+import com.fd.productfeed.request.ProductsFeed;
 import com.fd.productfeed.utils.FDJacksonUtils;
 import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.Channel;
@@ -29,14 +22,25 @@ import com.rabbitmq.client.Consumer;
 import com.rabbitmq.client.DefaultConsumer;
 import com.rabbitmq.client.Envelope;
 
+/**
+ * Product feed is currently set up in main. Two products hardcoded for demo.
+ * RestApiController currently sysouts response status code (401 without APP_KEY):
+ * 		- 12/22/17 commented out for rabbit testing
+ * 
+ * @author csears
+ */
 @SpringBootApplication
-public class ProductFeedYotpoApplication {
-
-	public static void main(String[] args) {
-		
+public class ProductFeedYotpoApplication 
+{
+	/**
+	 * 
+	 * @param args
+	 */
+	public static void main(String[] args) 
+	{
 		SpringApplication.run(ProductFeedYotpoApplication.class, args);
 		
-		System.out.println("Test run. updating pod");
+		System.out.println("Test run.");
 		
 		ProductsFeed productFeed = new ProductsFeed();
 		Map<String, Product> products = new HashMap<String, Product>();
@@ -52,7 +56,8 @@ public class ProductFeedYotpoApplication {
         products.put("gapi2", product2);
         productFeed.setProducts(products);
         
-        try {
+        try
+        {
 			String productsFeedRequest = FDJacksonUtils.writeToStr(productFeed);
 			
 			System.out.println("requeset: ");
@@ -61,29 +66,38 @@ public class ProductFeedYotpoApplication {
 			//RestApiController prodFeed = new RestApiController();
 			
 			//System.out.println("resp: " + prodFeed.createProductFeed(productFeed));
-	        
-			
-		} catch (IOException e) {
+		} 
+        catch (IOException e) 
+        {
 			e.printStackTrace();
 		}		
 		
 		//ApplicationContext context = SpringApplication.run(ProductFeedYotpoApplication.class, args);
 		//System.out.println(( (RESTClientExample) context.getBean("restClient")).getAllEmployees());
         
-        try {
-        	
+        try 
+        {
 			testRabbit();
-			
-		} catch (IOException e) {
+		} 
+        catch (IOException e) 
+        {
 			System.out.println("ioexception: " + e.toString());
 			e.printStackTrace();
-		} catch (TimeoutException e) {
+		} 
+        catch (TimeoutException e) 
+        {
 			System.out.println("timeoutexception: " + e.toString());
 			e.printStackTrace();
 		}
 	}
 	
-	public static void testRabbit() throws IOException, TimeoutException {
+	/**
+	 * 
+	 * @throws IOException
+	 * @throws TimeoutException
+	 */
+	public static void testRabbit() throws IOException, TimeoutException 
+	{
 		// Referenced code from TestRabbitMQConsumer
 		// Accepts incoming from TestRabbitMQproducer
 		
@@ -112,7 +126,6 @@ public class ProductFeedYotpoApplication {
 			}
 		};
 
-		channel.basicConsume(queueName, true, consumer);
-		
+		channel.basicConsume(queueName, true, consumer);		
 	}
 }
