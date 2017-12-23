@@ -36,7 +36,7 @@ public class ProductFeedYotpoApplication {
 		
 		//SpringApplication.run(ProductFeedYotpoApplication.class, args);
 		
-		System.out.println("Test run.");
+		System.out.println("Test run. updating pod");
 		
 		ProductsFeed productFeed = new ProductsFeed();
 		Map<String, Product> products = new HashMap<String, Product>();
