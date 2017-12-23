@@ -160,6 +160,7 @@ jobs:
               kubectl create -f product-feed-yotpo.yaml;
             else
               #kubectl set image deployment/product-feed-yotpo product-feed-yotpo=gcr.io/product-feed-docker/product-feed-yotpo:latest --namespace=product-feed-processors
+              echo "update";
             fi
             
             # retrieve our gcloud service account from the CircleCI environment
