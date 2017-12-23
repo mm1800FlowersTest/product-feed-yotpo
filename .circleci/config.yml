@@ -24,14 +24,14 @@ references:
       environment:
         # Customize the JVM maximum heap limit
         MAVEN_OPTS: -Xmx3200m
-        SHORT_GIT_HASH: $(echo $CIRCLE_SHA1 | cut -c -7)        
+        SHORT_GIT_HASH: $CIRCLE_SHA1
 
   gcloud_defaults: &gcloud_defaults
       working_directory: ~/workspace
       docker:
         - image: mmosttler/circleci_openjdk_gcloud:8u151-jdk-gcloud-182
       environment:
-        SHORT_GIT_HASH: $(echo $CIRCLE_SHA1 | cut -c -7)        
+        SHORT_GIT_HASH: $CIRCLE_SHA1
 
 ##### Declare the Jobs #####
 jobs:
