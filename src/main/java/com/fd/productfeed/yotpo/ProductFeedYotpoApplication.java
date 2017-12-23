@@ -90,8 +90,8 @@ public class ProductFeedYotpoApplication {
 		String EXCHANGE_NAME = "testTopic";
 		
 		ConnectionFactory factory = new ConnectionFactory();
-		factory.setHost("localhost");
-		//factory.setHost("rabbitmq.product-feed-rabbitmq.svc.cluster.local");
+		//factory.setHost("localhost");
+		factory.setHost("rabbitmq.product-feed-rabbitmq.svc.cluster.local");
 		Connection connection = factory.newConnection();
 		Channel channel = connection.createChannel();
 
