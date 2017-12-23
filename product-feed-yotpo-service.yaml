@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: product-feed-yotpo
+  name: product-feed-yotpo
+  labels:
+    app: product-feed-yotpo
+    type: LoadBalancer  
+spec:
+  type: LoadBalancer
+  ports:
+   - name: http
+     protocol: TCP
+     port: 8080
+     targetPort: 8080
+     nodePort: 8080
+  selector:
+    app: product-feed-yotpo
