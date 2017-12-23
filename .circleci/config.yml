@@ -57,7 +57,7 @@ jobs:
             - pom.xml
             - .springBeans
             - Dockerfile
-            - *.yaml
+            - ./*.yaml
             - src/*
             - target/*
   
