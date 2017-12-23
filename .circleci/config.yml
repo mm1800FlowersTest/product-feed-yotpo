@@ -88,7 +88,7 @@ jobs:
           command: |
             docker build -t gcr.io/product-feed-docker/product-feed-yotpo .
             gcloud docker --authorize-only
-            docker push gcr.io/product-feed-docker/product-feed-yotpo:latest
+            docker push gcr.io/product-feed-docker/product-feed-yotpo:$CIRCLE_BUILD_NUM
 
   unit-test:
     <<: *java_defaults
@@ -146,7 +146,6 @@ jobs:
             gcloud container clusters get-credentials product-feed --zone us-central1-a --project product-feed-dev
             
             #first check if the pod is already deployed for product-feed-yotpo in the namespace.
-            kubectl get pods --namespace=product-feed-processors
             pods=$(kubectl get pods --namespace=product-feed-processors)
             podmatch=$(echo $pods | sed -E 's/.*(product-feed-yotpo).*/\1/')
             if [[ "product-feed-yotpo" == $podmatch ]]; then
@@ -159,7 +158,7 @@ jobs:
             if [[ $deploy_action == "create" ]]; then
               kubectl create -f product-feed-yotpo.yaml;
             else
-              kubectl set image deployment/product-feed-yotpo-deployment product-feed-yotpo=gcr.io/product-feed-docker/product-feed-yotpo:latest --namespace=product-feed-processors
+              kubectl set image deployment/product-feed-yotpo-deployment product-feed-yotpo=gcr.io/product-feed-docker/product-feed-yotpo:$CIRCLE_BUILD_NUM --namespace=product-feed-processors
               kubectl set image deployment/product-feed-yotpo-deployment product-feed-yotpo=gcr.io/product-feed-docker/product-feed-yotpo --namespace=product-feed-processors
             fi
       - store_artifacts:
