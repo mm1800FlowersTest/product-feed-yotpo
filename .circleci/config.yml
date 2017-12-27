@@ -7,26 +7,33 @@ version: 2
 
 ##### Declare defaults to be used in multiple jobs #####
 references:
-  defaults: &defaults
+  java_defaults: &java_defaults
       working_directory: ~/workspace
       docker:
         # Specify the build base image here.    
         #- image: mmosttler/circleci_openjdk_gcloud:8u151-jdk-gcloud-182
         - image: circleci/openjdk:8u151-jdk
+      environment:
+        # Customize the JVM maximum heap limit
+        MAVEN_OPTS: -Xmx3200m
 
-  deploy_defaults: &deploy_defaults
+  machine_defaults: &machine_defaults
       working_directory: ~/workspace
       machine:
         enabled: true
+      environment:
+        # Customize the JVM maximum heap limit
+        MAVEN_OPTS: -Xmx3200m
+
+  gcloud_defaults: &gcloud_defaults
+      working_directory: ~/workspace
+      docker:
+        - image: mmosttler/circleci_openjdk_gcloud:8u151-jdk-gcloud-182
 
 ##### Declare the Jobs #####
 jobs:
   build:
-    <<: *defaults
-    environment:
-      # Customize the JVM maximum heap limit
-      MAVEN_OPTS: -Xmx3200m
-
+    <<: *java_defaults
     steps:            
       - checkout
 
@@ -53,11 +60,12 @@ jobs:
             - pom.xml
             - .springBeans
             - Dockerfile
+            - ./*.yaml
             - src/*
             - target/*
   
   build-image:  
-    <<: *deploy_defaults
+    <<: *machine_defaults
     steps:        
       - attach-workspace:
           at: ~/workspace
@@ -67,21 +75,26 @@ jobs:
       - run: 
           name: Package up the compiled/built source.
           command: |
-            mvn package spring-boot:repackage -DskipTests=true
+            mvn package spring-boot:repackage -DskipTests=true      
+      - run:
+          name: connect to gcloud
+          command: |
+            # retrieve our gcloud service account from the CircleCI environment
+            echo $GCP_AUTH_DOCKER | base64 --decode --ignore-garbage > ~/gcp-docker-key.json
+            gcloud auth activate-service-account --key-file  ~/gcp-docker-key.json                
+      - save_cache:
+          key: v1-gcloud-{{ .Environment.CIRCLE_SHA1 }}
+          paths:
+            - ~/.config/gcloud
       - run:
           name: Build new image and push to private container registry
           command: |
-            ls -al target
-
-            docker build -t gcr.io/product-feed-docker/product-feed-yotpo .
-            # retrieve our gcloud service account from the CircleCI environment
-            echo $GCP_AUTH_DOCKER > ~/gcp-docker-key.json
-            gcloud auth activate-service-account --key-file  ~/gcp-docker-key.json                
+            docker build -t gcr.io/product-feed-docker/product-feed-yotpo:$CIRCLE_SHA1 .
             gcloud docker --authorize-only
-            docker push gcr.io/product-feed-docker/product-feed-yotpo:latest
-  
+            docker push gcr.io/product-feed-docker/product-feed-yotpo:$CIRCLE_SHA1
+
   unit-test:
-    <<: *defaults
+    <<: *java_defaults
     steps:        
       - attach-workspace:
           at: ~/workspace
@@ -102,7 +115,7 @@ jobs:
           path: ~/junit         
 
   integration-test:
-    <<: *defaults
+    <<: *java_defaults
     steps:        
       - attach-workspace:
           at: ~/workspace
@@ -124,7 +137,7 @@ jobs:
 
   ##### DEPLOYMENT JOBS #####
   deploy-dev:  
-    <<: *deploy_defaults
+    <<: *gcloud_defaults
     steps:        
       - attach-workspace:
           at: ~/workspace
@@ -133,19 +146,28 @@ jobs:
       - deploy: 
           name: Deploy to DEV
           command: |
-            # retrieve our gcloud service account from the CircleCI environment
-            #echo $GOOGLE_AUTH | base64 --decode --ignore-garbage > ~/gcp-key.json
-            #gcloud auth activate-service-account --key-file  ~/gcp-key.json      
-            # set the gcloud config environment like current project
-            #gcloud --quiet config set project $GOOGLE_PROJECT_PREFIX-dev1
+            gcloud container clusters get-credentials product-feed --zone us-central1-a --project product-feed-dev
+            
+            #first check if the pod is already deployed for product-feed-yotpo in the namespace.
+            pods=$(kubectl get pods --namespace=product-feed-processors)
+            podmatch=$(echo $pods | sed -E 's/.*(product-feed-yotpo).*/\1/')
+            if [[ "product-feed-yotpo" == $podmatch ]]; then
+              deploy_action="update";
+            else
+              deploy_action="create";
+            fi
 
-            #GAE_TAG=$(echo "$CIRCLE_TAG" | sed 's/./\L&/g' | sed 's/[\.\+]/-/g')
-            #gcloud app deploy target/appengine-staging/app.yaml --version v$GAE_TAG-$CIRCLE_BUILD_NUM
+            #now do the deploy as a create or an update            
+            if [[ $deploy_action == "create" ]]; then
+              kubectl create -f product-feed-yotpo.yaml;
+            else
+              kubectl --namespace=product-feed-processors set image deployment/product-feed-yotpo-deployment product-feed-yotpo=gcr.io/product-feed-docker/product-feed-yotpo:$CIRCLE_SHA1
+            fi
       - store_artifacts:
           path: ~/.config/gcloud/logs 
 
   deploy-uat:  
-    <<: *deploy_defaults
+    <<: *gcloud_defaults
     steps:        
       - attach-workspace:
           at: ~/workspace
@@ -161,7 +183,7 @@ jobs:
             #gcloud app deploy target/appengine-staging/app.yaml --no-promote --no-stop-previous-version --version v$GAE_TAG-$CIRCLE_BUILD_NUM
 
   deploy-prod:  
-    <<: *deploy_defaults
+    <<: *gcloud_defaults
     steps:        
       - attach-workspace:
           at: ~/workspace

@@ -1,0 +1,29 @@
+apiVersion: apps/v1beta2 # for versions before 1.9.0 use apps/v1beta2
+kind: Deployment
+metadata:
+  name: product-feed-yotpo-deployment
+  namespace: product-feed-processors
+  labels:
+    app: product-feed-yotpo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: product-feed-yotpo
+  template:
+    metadata:
+      labels:
+        app: product-feed-yotpo
+    spec:
+      containers:
+      - name: product-feed-yotpo
+        image: gcr.io/product-feed-docker/product-feed-yotpo:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+        volumeMounts:
+        - name: varlog
+          mountPath: /var/log
+  volumes:
+  - name: varlog
+    emptyDir: {}
